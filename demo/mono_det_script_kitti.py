@@ -95,7 +95,6 @@ def get_parser():
         '--snapshot',
         action='store_true',
         help='whether to save online visualization results')
-    args = parser.parse_args()
     return parser
 
 
@@ -148,11 +147,11 @@ if __name__ == "__main__":
                     truncated = 0
                     occluded = 0
                     alpha = result[0]['img_bbox']['boxes_3d'].local_yaw[obj_idx].numpy()
-                    corners_3d = result[0]['img_bbox']['boxes_3d'].corners[obj_idx].numpy().T
+                    corners_3d = result[0]['img_bbox']['boxes_3d'].corners[obj_idx].numpy().T / 1.361  # Critical to adapt the depth based on cross-dataset focal length ratio!
                     corners_2d = view_points(corners_3d, P[:, :3], normalize=True)
                     bbox = np.round([corners_2d[0].min(), corners_2d[1].min(), corners_2d[0].max(), corners_2d[1].max()], 2)
                     dimensions = np.round(result[0]['img_bbox']['boxes_3d'].dims[obj_idx][[2, 1, 0]].numpy(), 2)
-                    location = np.round(result[0]['img_bbox']['boxes_3d'].bottom_center[obj_idx].numpy(), 2)
+                    location = np.round(result[0]['img_bbox']['boxes_3d'].bottom_center[obj_idx].numpy(), 2) / 1.361  # Critical to adapt the depth based on cross-dataset focal length ratio!
                     rotation_y = np.round(result[0]['img_bbox']['boxes_3d'].yaw[obj_idx].numpy(), 2)
                     score = np.round(result[0]['img_bbox']['scores_3d'][obj_idx].numpy(), 2)
 
@@ -177,12 +176,13 @@ if __name__ == "__main__":
             # out_dict['attrs'] = result[0]['img_bbox']['attrs_3d'][keep_indices].tolist()
             # out_dict['class_names'] = class_names
 
-            show_result_meshlab(
-                data,
-                result,
-                args.output,
-                args.score_thr,
-                show=args.show,
-                snapshot=args.snapshot,
-                task='mono-det')
+            if args.snapshot:
+                show_result_meshlab(
+                    data,
+                    result,
+                    args.output,
+                    args.score_thr,
+                    show=args.show,
+                    snapshot=args.snapshot,
+                    task='mono-det')
 
