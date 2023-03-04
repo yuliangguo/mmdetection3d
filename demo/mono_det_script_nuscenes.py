@@ -63,7 +63,7 @@ def get_parser():
 
 if __name__ == "__main__":
     class_names = np.array(class_names)
-    mp.set_start_method("spawn", force=True)
+    # mp.set_start_method("spawn", force=True)
     args = get_parser().parse_args()
 
     args.input = os.path.join(args.input, args.camera_id)

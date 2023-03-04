@@ -100,8 +100,7 @@ def get_parser():
 
 if __name__ == "__main__":
     class_names = np.array(class_names)
-
-    mp.set_start_method("spawn", force=True)
+    # mp.set_start_method("spawn", force=True)
     args = get_parser().parse_args()
 
     if not os.path.exists(args.output):
