@@ -176,7 +176,7 @@ if __name__ == "__main__":
             # out_dict['attrs'] = result[0]['img_bbox']['attrs_3d'][keep_indices].tolist()
             # out_dict['class_names'] = class_names
 
-            if args.snapshot:
+            if args.snapshot:  # the later one seems not effective, always save output
                 show_result_meshlab(
                     data,
                     result,

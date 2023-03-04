@@ -46,7 +46,7 @@ def get_parser():
     )
     parser.add_argument('--camera-id',
                         help='the camera id from nuscenes',
-                        default='CAM_FRONT',
+                        default='CAM_BACK_LEFT',
                         type=str)
     parser.add_argument(
         '--score-thr', type=float, default=0.15, help='bbox score threshold')
@@ -58,12 +58,11 @@ def get_parser():
         '--snapshot',
         action='store_true',
         help='whether to save online visualization results')
-    args = parser.parse_args()
     return parser
 
 
 if __name__ == "__main__":
-
+    class_names = np.array(class_names)
     mp.set_start_method("spawn", force=True)
     args = get_parser().parse_args()
 
@@ -73,26 +72,12 @@ if __name__ == "__main__":
     if not os.path.exists(args.output):
         os.makedirs(args.output)
 
-    if args.snapshot:
-        vis_dir = os.path.join(args.output, 'vis')
-        os.makedirs(vis_dir)
-
-    with open(os.path.join(args.label_dir, 'sensor.json'), 'r') as f:
-        sensors = json.load(f)
-
     with open(os.path.join(args.label_dir, 'calibrated_sensor.json'), 'r') as f:
         calibrated_sensors = json.load(f)
 
-    sensor_token = None
-    for sensor in sensors:
-        if sensor['channel'] == args.camera_id:
-            sensor_token = sensor['token']
-            break
-    cam_intrinsic = None
-    for calibrated_sensor in calibrated_sensors:
-        if calibrated_sensor['sensor_token'] == sensor_token:
-            cam_intrinsic = calibrated_sensor['camera_intrinsic']
-            break
+    with open(os.path.join(args.label_dir, 'sample_data.json'), 'r') as f:
+        sample_data = json.load(f)
+
 
     # demo = VisualizationDemo(cfg)
     model = init_model(args.config, args.checkpoint, device='cuda:0')
@@ -100,9 +85,18 @@ if __name__ == "__main__":
     if args.input:
         input_files = glob.glob(args.input + '/*.jpg')
         for path in tqdm.tqdm(input_files, disable=not args.output):
-            # use PIL, to be consistent with evaluation
-            # img = read_image(path, format="BGR")
+            img_name = os.path.basename(path)
+            # if img_name != 'n008-2018-08-01-15-16-36-0400__CAM_BACK_LEFT__1533151613947405.jpg':
+            #     continue
 
+            # A complicated way to get camera intrinsics because there single cam-id may have multiple caliab sensors
+            key1 = "filename"
+            val1 = "samples/" + args.camera_id + "/" + img_name
+            d1 = next((d1 for d1 in sample_data if d1.get(key1) == val1), None)
+            key2 = 'token'
+            val2 = d1['calibrated_sensor_token']
+            d2 = next((d2 for d2 in calibrated_sensors if d2.get(key2) == val2), None)
+            cam_intrinsic = d2['camera_intrinsic']
             json_data = {"images": [{"file_name": path, "cam_intrinsic": cam_intrinsic}]}
             output_file = 'temp_dict.json'
             with open(output_file, 'w') as f:
@@ -111,33 +105,40 @@ if __name__ == "__main__":
             start_time = time.time()
             result, data = inference_mono_3d_detector(model, path, output_file)
 
-            # TODO: save prediction results in economic way
-            out_jsonfile = os.path.join(args.output, os.path.basename(path)[:-4]+'.json')
+            out_jsonfile = os.path.join(args.output, img_name[:-4]+'.json')
             out_dict = {}
             keep_indices = np.where(result[0]['img_bbox']['scores_3d'] > args.score_thr)[0]
 
-            out_dict['boxes_center'] = result[0]['img_bbox']['boxes_3d'].center[keep_indices].tolist()
+            # TODO: Box center is strange to be same as bottom center
+            boxes_center = result[0]['img_bbox']['boxes_3d'].center[keep_indices].numpy()
+            boxes_dims = result[0]['img_bbox']['boxes_3d'].dims[keep_indices].numpy()
+            # dims: l h w
+            boxes_center[:, 1] = boxes_center[:, 1] - boxes_dims[:, 1]/2
+            out_dict['boxes_center'] = boxes_center.tolist()
             out_dict['boxes_bottom_center'] = result[0]['img_bbox']['boxes_3d'].bottom_center[keep_indices].tolist()
-            out_dict['boxes_bottom_height'] = result[0]['img_bbox']['boxes_3d'].bottom_height[keep_indices].tolist()
-            out_dict['boxes_dims'] = result[0]['img_bbox']['boxes_3d'].dims[keep_indices].tolist()
-            out_dict['boxes_height'] = result[0]['img_bbox']['boxes_3d'].height[keep_indices].tolist()
+            out_dict['boxes_gravity_center'] = result[0]['img_bbox']['boxes_3d'].gravity_center[keep_indices].tolist()
+            out_dict['corners_3d'] = result[0]['img_bbox']['boxes_3d'].corners[keep_indices].numpy().tolist()
+            # out_dict['boxes_bottom_height'] = result[0]['img_bbox']['boxes_3d'].bottom_height[keep_indices].tolist()
+            out_dict['boxes_dims'] = boxes_dims.tolist()
+            # out_dict['boxes_height'] = result[0]['img_bbox']['boxes_3d'].height[keep_indices].tolist()
             out_dict['boxes_local_yaw'] = result[0]['img_bbox']['boxes_3d'].local_yaw[keep_indices].tolist()
-            out_dict['boxes_volume'] = result[0]['img_bbox']['boxes_3d'].volume[keep_indices].tolist()
+            # out_dict['boxes_volume'] = result[0]['img_bbox']['boxes_3d'].volume[keep_indices].tolist()
             out_dict['boxes_yaw'] = result[0]['img_bbox']['boxes_3d'].yaw[keep_indices].tolist()
             out_dict['scores'] = result[0]['img_bbox']['scores_3d'][keep_indices].tolist()
-            out_dict['labels'] = result[0]['img_bbox']['labels_3d'][keep_indices].tolist()
-            out_dict['attrs'] = result[0]['img_bbox']['attrs_3d'][keep_indices].tolist()
-            out_dict['class_names'] = class_names
+            # out_dict['attrs'] = result[0]['img_bbox']['attrs_3d'][keep_indices].tolist()
+            label_indices = result[0]['img_bbox']['labels_3d'][keep_indices].tolist()
+            out_dict['classes'] = class_names[label_indices].tolist()
 
             with open(out_jsonfile, 'w') as f:
                 json.dump(out_dict, f)
 
-            show_result_meshlab(
-                data,
-                result,
-                args.output,
-                args.score_thr,
-                show=args.show,
-                snapshot=args.snapshot,
-                task='mono-det')
+            if args.snapshot:  # the later one seems not effective, always save output
+                show_result_meshlab(
+                    data,
+                    result,
+                    args.output,
+                    args.score_thr,
+                    show=args.show,
+                    snapshot=args.snapshot,
+                    task='mono-det')
 
