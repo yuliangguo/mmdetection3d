@@ -29,19 +29,19 @@ def get_parser():
                         default='checkpoints/fcos3d_r101_caffe_fpn_gn-head_dcn_2x8_1x_nus-mono3d_finetune_20210717_095645-8d806dc2.pth')
     parser.add_argument(
         "--input",
-        default='/mnt/LinuxDataFast/Datasets/NuScenes/v1.0-mini/samples/',
+        default='/media/yuliangguo/data_ssd_4tb/Datasets/nuscenes_yuliang/samples/',
         help="A list of space separated input images; "
         "or a single glob pattern such as 'directory/*.jpg'",
     )
     parser.add_argument(
         "--output",
-        default='/mnt/LinuxDataFast/Datasets/NuScenes/v1.0-mini/pred_det3d/',
+        default='/media/yuliangguo/data_ssd_4tb/Datasets/nuscenes_yuliang/pred_det3d/',
         help="A file or directory to save output results. "
         "If not given, will show output in an OpenCV window.",
     )
     parser.add_argument(
         "--label-dir",
-        default='/mnt/LinuxDataFast/Datasets/NuScenes/v1.0-mini/v1.0-mini/',
+        default='/media/yuliangguo/data_ssd_4tb/Datasets/nuscenes_yuliang/v1.0-trainval/',
         help="where nusc labels saved"
     )
     parser.add_argument('--camera-id',

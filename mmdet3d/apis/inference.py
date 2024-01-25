@@ -2,6 +2,8 @@
 import re
 from copy import deepcopy
 from os import path as osp
+from thop import profile
+import time
 
 import mmcv
 import numpy as np
@@ -282,7 +284,10 @@ def inference_mono_3d_detector(model, image, ann_file):
 
     # forward the model
     with torch.no_grad():
+        # t3 = time.time()
         result = model(return_loss=False, rescale=True, **data)
+        # t4 = time.time()
+        # print(f'inference time {t4 - t3}s')
     return result, data
 
 

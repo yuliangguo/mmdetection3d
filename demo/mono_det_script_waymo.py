@@ -70,19 +70,19 @@ def get_parser():
                         default='checkpoints/fcos3d_r101_caffe_fpn_gn-head_dcn_2x8_1x_nus-mono3d_finetune_20210717_095645-8d806dc2.pth')
     parser.add_argument(
         "--input",
-        default='/media/yuliangguo/data_ssd_4tb/Datasets/kitti/training/image_2',
+        default='/media/yuliangguo/data_ssd_4tb/Datasets/Waymo_validation_set_DEVIANT/validation/image',
         help="A list of space separated input images; "
         "or a single glob pattern such as 'directory/*.png'",
     )
     parser.add_argument(
         "--output",
-        default='/home/yuliangguo/Projects/nerf-auto-driving/data/third_party_det3D/fcos3d/result_kitti/training/label_2',
+        default='/home/yuliangguo/Projects/nerf-auto-driving/data/third_party_det3D/fcos3d/result_waymo/validation/label',
         help="A file or directory to save output results. "
         "If not given, will show output in an OpenCV window.",
     )
     parser.add_argument(
         "--label-dir",
-        default='/media/yuliangguo/data_ssd_4tb/Datasets/kitti/training/calib',
+        default='/media/yuliangguo/data_ssd_4tb/Datasets/Waymo_validation_set_DEVIANT/validation/calib',
         help="where nusc labels saved"
     )
     parser.add_argument(
@@ -146,11 +146,11 @@ if __name__ == "__main__":
                     truncated = 0
                     occluded = 0
                     alpha = result[0]['img_bbox']['boxes_3d'].local_yaw[obj_idx].numpy()
-                    corners_3d = result[0]['img_bbox']['boxes_3d'].corners[obj_idx].numpy().T / 1.361  # TODO: Critical to adapt the depth based on cross-dataset focal length ratio!
+                    corners_3d = result[0]['img_bbox']['boxes_3d'].corners[obj_idx].numpy().T / 1.141  # TODO: Critical to adapt the depth based on cross-dataset focal length ratio!
                     corners_2d = view_points(corners_3d, P[:, :3], normalize=True)
                     bbox = np.round([corners_2d[0].min(), corners_2d[1].min(), corners_2d[0].max(), corners_2d[1].max()], 2)
                     dimensions = np.round(result[0]['img_bbox']['boxes_3d'].dims[obj_idx][[2, 1, 0]].numpy(), 2)
-                    location = np.round(result[0]['img_bbox']['boxes_3d'].bottom_center[obj_idx].numpy(), 2) / 1.361  # TODO: Critical to adapt the depth based on cross-dataset focal length ratio!
+                    location = np.round(result[0]['img_bbox']['boxes_3d'].bottom_center[obj_idx].numpy(), 2) / 1.141  # TODO: Critical to adapt the depth based on cross-dataset focal length ratio!
                     rotation_y = np.round(result[0]['img_bbox']['boxes_3d'].yaw[obj_idx].numpy(), 2)
                     score = np.round(result[0]['img_bbox']['scores_3d'][obj_idx].numpy(), 2)
 
