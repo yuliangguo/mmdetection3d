@@ -86,6 +86,11 @@ def get_parser():
         help="where nusc labels saved"
     )
     parser.add_argument(
+        "--split-file",
+        default='/media/yuliangguo/data_ssd_4tb/Datasets/Waymo_validation_set_DEVIANT/validation/val_small.txt',
+        help="file to specify subset split",
+    )
+    parser.add_argument(
         '--score-thr', type=float, default=0.15, help='bbox score threshold')
     parser.add_argument(
         '--show',
@@ -110,7 +115,11 @@ if __name__ == "__main__":
     model = init_model(args.config, args.checkpoint, device='cuda:0')
 
     if args.input:
-        input_files = glob.glob(args.input + '/*.png')
+        if os.path.exists(args.split_file):
+            with open(args.split_file) as file:
+                input_files = [os.path.join(args.input, line.rstrip() + '.png') for line in file]
+        else:
+            input_files = glob.glob(args.input + '/*.png')
         for path in tqdm.tqdm(input_files, disable=not args.output):
 
             calib_file = os.path.join(args.label_dir, os.path.basename(path)[:-4] + '.txt')
@@ -141,16 +150,23 @@ if __name__ == "__main__":
             keep_indices = np.where(result[0]['img_bbox']['scores_3d'] > args.score_thr)[0]
 
             with open(out_label_file, 'a') as FILE:
+                # TODO: Critical to adapt the depth based on cross-dataset focal length ratio! -- Waymo has extrinsic domain gaps too, so requires hand-tuning each dimension
+                result[0]['img_bbox']['boxes_3d'].corners[keep_indices, :, 0] *= (1.5)
+                result[0]['img_bbox']['boxes_3d'].corners[keep_indices, :, 1] *= (1.2)
+                result[0]['img_bbox']['boxes_3d'].corners[keep_indices, :, 2] *= (1.5)
+                result[0]['img_bbox']['boxes_3d'].bottom_center[keep_indices, 0] *= (1.5)
+                result[0]['img_bbox']['boxes_3d'].bottom_center[keep_indices, 1] *= (1.2)
+                result[0]['img_bbox']['boxes_3d'].bottom_center[keep_indices, 2] *= (1.5)
                 for obj_idx in keep_indices:
                     type = class_names[result[0]['img_bbox']['labels_3d'][obj_idx]]
                     truncated = 0
                     occluded = 0
                     alpha = result[0]['img_bbox']['boxes_3d'].local_yaw[obj_idx].numpy()
-                    corners_3d = result[0]['img_bbox']['boxes_3d'].corners[obj_idx].numpy().T / 1.141  # TODO: Critical to adapt the depth based on cross-dataset focal length ratio!
+                    corners_3d = result[0]['img_bbox']['boxes_3d'].corners[obj_idx].numpy().T
                     corners_2d = view_points(corners_3d, P[:, :3], normalize=True)
                     bbox = np.round([corners_2d[0].min(), corners_2d[1].min(), corners_2d[0].max(), corners_2d[1].max()], 2)
                     dimensions = np.round(result[0]['img_bbox']['boxes_3d'].dims[obj_idx][[2, 1, 0]].numpy(), 2)
-                    location = np.round(result[0]['img_bbox']['boxes_3d'].bottom_center[obj_idx].numpy(), 2) / 1.141  # TODO: Critical to adapt the depth based on cross-dataset focal length ratio!
+                    location = np.round(result[0]['img_bbox']['boxes_3d'].bottom_center[obj_idx].numpy(), 2)
                     rotation_y = np.round(result[0]['img_bbox']['boxes_3d'].yaw[obj_idx].numpy(), 2)
                     score = np.round(result[0]['img_bbox']['scores_3d'][obj_idx].numpy(), 2)
 

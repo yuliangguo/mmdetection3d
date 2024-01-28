@@ -141,16 +141,19 @@ if __name__ == "__main__":
             keep_indices = np.where(result[0]['img_bbox']['scores_3d'] > args.score_thr)[0]
 
             with open(out_label_file, 'a') as FILE:
+                # TODO: Critical to adapt the depth based on cross-dataset focal length ratio! --> follow DEVIANT
+                result[0]['img_bbox']['boxes_3d'].corners[keep_indices] /= 1.361
+                result[0]['img_bbox']['boxes_3d'].bottom_center[keep_indices] /= 1.361
                 for obj_idx in keep_indices:
                     type = class_names[result[0]['img_bbox']['labels_3d'][obj_idx]]
                     truncated = 0
                     occluded = 0
                     alpha = result[0]['img_bbox']['boxes_3d'].local_yaw[obj_idx].numpy()
-                    corners_3d = result[0]['img_bbox']['boxes_3d'].corners[obj_idx].numpy().T / 1.361  # TODO: Critical to adapt the depth based on cross-dataset focal length ratio!
+                    corners_3d = result[0]['img_bbox']['boxes_3d'].corners[obj_idx].numpy().T
                     corners_2d = view_points(corners_3d, P[:, :3], normalize=True)
                     bbox = np.round([corners_2d[0].min(), corners_2d[1].min(), corners_2d[0].max(), corners_2d[1].max()], 2)
                     dimensions = np.round(result[0]['img_bbox']['boxes_3d'].dims[obj_idx][[2, 1, 0]].numpy(), 2)
-                    location = np.round(result[0]['img_bbox']['boxes_3d'].bottom_center[obj_idx].numpy(), 2) / 1.361  # TODO: Critical to adapt the depth based on cross-dataset focal length ratio!
+                    location = np.round(result[0]['img_bbox']['boxes_3d'].bottom_center[obj_idx].numpy(), 2)
                     rotation_y = np.round(result[0]['img_bbox']['boxes_3d'].yaw[obj_idx].numpy(), 2)
                     score = np.round(result[0]['img_bbox']['scores_3d'][obj_idx].numpy(), 2)
 
