@@ -87,7 +87,7 @@ def get_parser():
     )
     parser.add_argument(
         "--split-file",
-        default='/media/yuliangguo/data_ssd_4tb/Datasets/Waymo_validation_set_DEVIANT/validation/val_small.txt',
+        default='/media/yuliangguo/data_ssd_4tb/Datasets/Waymo_validation_set_DEVIANT/validation/val.txt',
         help="file to specify subset split",
     )
     parser.add_argument(

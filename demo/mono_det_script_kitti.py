@@ -142,8 +142,14 @@ if __name__ == "__main__":
 
             with open(out_label_file, 'a') as FILE:
                 # TODO: Critical to adapt the depth based on cross-dataset focal length ratio! --> follow DEVIANT
-                result[0]['img_bbox']['boxes_3d'].corners[keep_indices] /= 1.361
-                result[0]['img_bbox']['boxes_3d'].bottom_center[keep_indices] /= 1.361
+                # result[0]['img_bbox']['boxes_3d'].corners[keep_indices] /= 1.361
+                # result[0]['img_bbox']['boxes_3d'].bottom_center[keep_indices] /= 1.361
+                result[0]['img_bbox']['boxes_3d'].corners[keep_indices, :, 0] *= (707.049 / 1266.417)
+                result[0]['img_bbox']['boxes_3d'].corners[keep_indices, :, 1] *= (707.049 / 1266.417)
+                result[0]['img_bbox']['boxes_3d'].corners[keep_indices, :, 2] *= (707.049 / 1266.417)
+                result[0]['img_bbox']['boxes_3d'].bottom_center[keep_indices, 0] *= (707.049 / 1266.417)
+                result[0]['img_bbox']['boxes_3d'].bottom_center[keep_indices, 1] *= (707.049 / 1266.417)
+                result[0]['img_bbox']['boxes_3d'].bottom_center[keep_indices, 2] *= (707.049 / 1266.417)
                 for obj_idx in keep_indices:
                     type = class_names[result[0]['img_bbox']['labels_3d'][obj_idx]]
                     truncated = 0
